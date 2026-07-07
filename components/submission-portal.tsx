@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react"
 import { Tag, Search, Users } from "lucide-react"
 import { waLink } from "@/lib/data"
+import { supabase } from "@/lib/supabase"
 
 type Pane = "sell" | "hunt" | "roommate"
 
@@ -18,11 +19,63 @@ const labelClass = "text-xs font-bold uppercase tracking-wide text-foreground"
 
 export function SubmissionPortal() {
   const [pane, setPane] = useState<Pane>("sell")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const submit = (e: FormEvent<HTMLFormElement>, build: (d: FormData) => string) => {
+  const submit = async (
+    e: FormEvent<HTMLFormElement>, 
+    currentPane: Pane,
+    buildMessage: (d: FormData) => string
+  ) => {
     e.preventDefault()
-    const message = build(new FormData(e.currentTarget))
-    window.open(waLink(message), "_blank", "noopener,noreferrer")
+    setIsSubmitting(true)
+
+    const formData = new FormData(e.currentTarget)
+    const message = buildMessage(formData)
+
+    try {
+      // 1. Prepare data variables based on which form pane is filled out
+      let title = ""
+      let description = ""
+      let price = 0
+      let location = formData.get("location") as string || formData.get("loc") as string || ""
+      let whatsapp_number = formData.get("phone") as string || ""
+
+      if (currentPane === "sell") {
+        title = formData.get("title") as string || ""
+        description = formData.get("desc") as string || ""
+        price = parseInt(formData.get("price") as string) || 0
+      } else if (currentPane === "hunt") {
+        title = `Looking for: ${formData.get("type")}`
+        description = `Move-in Date: ${formData.get("date")}. Preferences: ${formData.get("notes")}`
+        price = parseInt(formData.get("budget") as string) || 0
+      } else if (currentPane === "roommate") {
+        title = `Roommate Match (${formData.get("gender")})`
+        description = `Lifestyle details: ${formData.get("habits")}`
+        price = parseInt(formData.get("budget") as string) || 0
+      }
+
+      // 2. Insert into our Supabase 'listings' table
+      const { error } = await supabase.from("listings").insert([
+        {
+          title,
+          description,
+          price,
+          category: currentPane, // saves as 'sell', 'hunt', or 'roommate'
+          location,
+          whatsapp_number,
+        },
+      ])
+
+      if (error) {
+        console.error("Error saving to database:", error.message)
+      }
+    } catch (err) {
+      console.error("Database connection failure:", err)
+    } finally {
+      setIsSubmitting(false)
+      // 3. Always open WhatsApp regardless of database success so the user isn't stuck
+      window.open(waLink(message), "_blank", "noopener,noreferrer")
+    }
   }
 
   return (
@@ -62,6 +115,7 @@ export function SubmissionPortal() {
                 onSubmit={(e) =>
                   submit(
                     e,
+                    "sell",
                     (d) =>
                       `--- NEW SELL SUBMISSION ---\nName: ${d.get("name")}\nPhone: ${d.get("phone")}\nItem: ${d.get(
                         "title",
@@ -98,7 +152,9 @@ export function SubmissionPortal() {
                   <label className={labelClass}>Details & condition</label>
                   <textarea name="desc" rows={3} required placeholder="Specs, wear, age..." className={fieldClass} />
                 </div>
-                <SubmitButton>Compile & send to WhatsApp</SubmitButton>
+                <SubmitButton disabled={isSubmitting}>
+                  {isSubmitting ? "Saving listing..." : "Compile & send to WhatsApp"}
+                </SubmitButton>
               </form>
             )}
 
@@ -107,6 +163,7 @@ export function SubmissionPortal() {
                 onSubmit={(e) =>
                   submit(
                     e,
+                    "hunt",
                     (d) =>
                       `--- HOUSE HUNT REQUEST ---\nBudget: KES ${d.get("budget")}\nType: ${d.get(
                         "type",
@@ -148,7 +205,9 @@ export function SubmissionPortal() {
                     className={fieldClass}
                   />
                 </div>
-                <SubmitButton>Submit search request</SubmitButton>
+                <SubmitButton disabled={isSubmitting}>
+                  {isSubmitting ? "Submitting..." : "Submit search request"}
+                </SubmitButton>
               </form>
             )}
 
@@ -157,6 +216,7 @@ export function SubmissionPortal() {
                 onSubmit={(e) =>
                   submit(
                     e,
+                    "roommate",
                     (d) =>
                       `--- ROOMMATE MATCH ---\nGender: ${d.get("gender")}\nShare budget: KES ${d.get(
                         "budget",
@@ -192,7 +252,9 @@ export function SubmissionPortal() {
                     className={fieldClass}
                   />
                 </div>
-                <SubmitButton>Find my roommate match</SubmitButton>
+                <SubmitButton disabled={isSubmitting}>
+                  {isSubmitting ? "Matching..." : "Find my roommate match"}
+                </SubmitButton>
               </form>
             )}
           </div>
@@ -202,11 +264,12 @@ export function SubmissionPortal() {
   )
 }
 
-function SubmitButton({ children }: { children: React.ReactNode }) {
+function SubmitButton({ children, disabled }: { children: React.ReactNode; disabled?: boolean }) {
   return (
     <button
       type="submit"
-      className="mt-2 w-full rounded-md bg-primary px-4 py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+      disabled={disabled}
+      className="mt-2 w-full rounded-md bg-primary px-4 py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {children}
     </button>
