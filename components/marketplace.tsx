@@ -1,10 +1,11 @@
-"use client"
+ "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Search, Home, ShoppingBag, Laptop, Layers, Info } from "lucide-react"
 import { ProductCard } from "@/components/product-card"
 import { ProductModal } from "@/components/product-modal"
-import { houses, householdItems, laptops, type House, type HouseType, type Product } from "@/lib/data"
+import { supabase } from "@/lib/supabase" // Make sure this path points to your supabase client
+import { houses, laptops, type House, type HouseType, type Product } from "@/lib/data"
 
 type Cat = "all" | "houses" | "items" | "laptops"
 
@@ -24,7 +25,37 @@ export function Marketplace() {
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState<Cat>("all")
   const [houseTab, setHouseTab] = useState<HouseType>("single")
-  const [selected, setSelected] = useState<House | Product | null>(null)
+  const [selected, setSelected] = useState<House | Product | any | null>(null)
+  
+  // Dynamic state for live Supabase household items
+  const [dbItems, setDbItems] = useState<any[]>([])
+  const [loadingItems, setLoadingItems] = useState(true)
+
+  // Fetch from database on load
+  useEffect(() => {
+    const fetchLiveItems = async () => {
+      const { data, error } = await supabase
+        .from("household_items")
+        .select("*")
+        .order("created_at", { ascending: false })
+      
+      if (data) {
+        // Map database naming structure to match the frontend <ProductCard /> parameters
+        const formatted = data.map(item => ({
+          id: item.id,
+          title: item.title,
+          price: `KES ${item.price.toLocaleString()}`,
+          desc: item.description || "",
+          image: item.image_url,
+          tag: item.category // 'STORAGE', 'STUDY', 'KITCHEN'
+        }))
+        setDbItems(formatted)
+      }
+      setLoadingItems(false)
+    }
+
+    fetchLiveItems()
+  }, [])
 
   const q = query.trim().toLowerCase()
   const matches = (haystack: string) => haystack.toLowerCase().includes(q)
@@ -37,7 +68,9 @@ export function Marketplace() {
     () => houses.filter((h) => h.houseType === houseTab && matches(`${h.title} ${h.location} ${h.tag}`)),
     [houseTab, q],
   )
-  const filteredItems = useMemo(() => householdItems.filter((i) => matches(`${i.title} ${i.desc} ${i.tag}`)), [q])
+  
+  // Filter dynamically from database array instead of static file array
+  const filteredItems = useMemo(() => dbItems.filter((i) => matches(`${i.title} ${i.desc} ${i.tag}`)), [dbItems, q])
   const filteredLaptops = useMemo(() => laptops.filter((l) => matches(`${l.title} ${l.desc} ${l.tag}`)), [q])
 
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
@@ -196,7 +229,9 @@ export function Marketplace() {
               </span>
             </div>
 
-            {filteredItems.length > 0 ? (
+            {loadingItems ? (
+              <p className="mt-8 text-center text-sm text-muted-foreground animate-pulse">Loading real-time catalog items...</p>
+            ) : filteredItems.length > 0 ? (
               <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredItems.map((it) => (
                   <ProductCard key={it.id} item={it} onOpen={() => setSelected(it)} />
