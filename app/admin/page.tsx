@@ -12,7 +12,10 @@ export default function AdminDashboard() {
   const [price, setPrice] = useState('')
   const [category, setCategory] = useState('STORAGE')
   const [description, setDescription] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
+  
+  // States for file picking & uploading state
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   // New States for On-Screen Editing Text Controls
   const [heroTitleInput, setHeroTitleInput] = useState('')
@@ -57,14 +60,65 @@ export default function AdminDashboard() {
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault()
-    const { error } = await supabase.from('household_items').insert([
-      { title, price: Number(price), category, description, image_url: imageUrl }
-    ])
+
+    if (!imageFile) {
+      alert('Please select an image file to upload first!')
+      return
+    }
     
-    if (!error) {
-      alert('Product published live!')
-      setTitle(''); setPrice(''); setDescription(''); setImageUrl('')
+    try {
+      setUploading(true)
+
+      // 1. Generate a clean unique filename to avoid duplicates
+      const fileExt = imageFile.name.split('.').pop()
+      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
+      const filePath = `products/${fileName}`
+
+      // 2. Upload the raw binary file to your Supabase public storage bucket
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, imageFile)
+
+      if (uploadError) {
+        throw new Error('Image storage upload failed: ' + uploadError.message)
+      }
+
+      // 3. Construct and grab the absolute public asset URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath)
+
+      // 4. Save to the database table matching your layout schema
+      const { error: dbError } = await supabase.from('household_items').insert([
+        { 
+          title, 
+          price: Number(price), 
+          category, 
+          description, 
+          image_url: publicUrl 
+        }
+      ])
+      
+      if (dbError) {
+        throw new Error('Database registry failed: ' + dbError.message)
+      }
+
+      alert('Product published live successfully with uploaded image!')
+      
+      // Reset inputs & local image state variables
+      setTitle('')
+      setPrice('')
+      setDescription('')
+      setImageFile(null)
+      
+      const fileInput = document.getElementById('image-file-picker') as HTMLInputElement
+      if (fileInput) fileInput.value = ''
+
       fetchData()
+    } catch (err: any) {
+      alert(err.message || 'An unexpected error occurred.')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -78,7 +132,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Update text values in database handler
   const handleUpdateText = async (key: string, value: string) => {
     const { error } = await supabase
       .from('site_settings')
@@ -167,14 +220,31 @@ export default function AdminDashboard() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-semibold text-zinc-400 block mb-1">Image Link (URL)</label>
-                <input type="text" value={imageUrl} onChange={e => setImageUrl(e.target.value)} required className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white" />
+                <label className="text-xs font-semibold text-zinc-400 block mb-1">Upload Product Image</label>
+                <input 
+                  id="image-file-picker"
+                  type="file" 
+                  accept="image/*"
+                  onChange={e => {
+                    if (e.target.files && e.target.files[0]) {
+                      setImageFile(e.target.files[0])
+                    }
+                  }} 
+                  required 
+                  className="w-full p-2 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-zinc-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 file:cursor-pointer" 
+                />
               </div>
               <div>
                 <label className="text-xs font-semibold text-zinc-400 block mb-1">Description</label>
                 <textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl h-20 text-sm resize-none text-white" />
               </div>
-              <button type="submit" className="w-full bg-amber-500 text-black font-bold py-3 rounded-xl text-sm">Publish Product Live</button>
+              <button 
+                type="submit" 
+                disabled={uploading}
+                className="w-full bg-amber-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-black font-bold py-3 rounded-xl text-sm transition-colors"
+              >
+                {uploading ? 'Uploading Image...' : 'Publish Product Live'}
+              </button>
             </form>
           </div>
 
@@ -185,7 +255,7 @@ export default function AdminDashboard() {
               {items.map((item: any) => (
                 <div key={item.id} className="bg-[#121212] p-4 rounded-xl border border-zinc-800 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <img src={item.image_url} className="w-10 h-10 object-cover rounded-lg" alt={item.title} />
+                    <img src={item.image_url} className="w-10 h-10 object-cover rounded-lg bg-zinc-900" alt={item.title} />
                     <div>
                       <p className="font-bold text-sm">{item.title}</p>
                       <p className="text-xs text-zinc-400">KES {item.price.toLocaleString()} • <span className="text-amber-500">{item.category}</span></p>
