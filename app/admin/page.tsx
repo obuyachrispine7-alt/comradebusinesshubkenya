@@ -8,11 +8,11 @@ export default function AdminDashboard() {
   
   // State for inventory management
   const [items, setItems] = useState([])
-  const [title, setTitle] = useState('') //
-  const [price, setPrice] = useState('') //
-  const [category, setCategory] = useState('STORAGE') //
-  const [description, setDescription] = useState('') //
-  const [imageUrl, setImageUrl] = useState('') //
+  const [title, setTitle] = useState('')
+  const [price, setPrice] = useState('')
+  const [category, setCategory] = useState('STORAGE')
+  const [description, setDescription] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
 
   // New States for On-Screen Editing Text Controls
   const [heroTitleInput, setHeroTitleInput] = useState('')
@@ -55,25 +55,25 @@ export default function AdminDashboard() {
     }
   }, [isAuthenticated])
 
-  const handleAddItem = async (e: React.FormEvent) => { //
-    e.preventDefault() //
-    const { error } = await supabase.from('household_items').insert([ //
-      { title, price: Number(price), category, description, image_url: imageUrl } //
-    ]) //
+  const handleAddItem = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const { error } = await supabase.from('household_items').insert([
+      { title, price: Number(price), category, description, image_url: imageUrl }
+    ])
     
-    if (!error) { //
-      alert('Product published live!') //
-      setTitle(''); setPrice(''); setDescription(''); setImageUrl('') //
-      fetchData() //
+    if (!error) {
+      alert('Product published live!')
+      setTitle(''); setPrice(''); setDescription(''); setImageUrl('')
+      fetchData()
     }
   }
 
-  const handleDeleteItem = async (id: string) => { //
-    if (confirm('Are you sure you want to remove this product?')) { //
-      const { error } = await supabase.from('household_items').delete().eq('id', id) //
-      if (!error) { //
-        alert('Product removed!') //
-        fetchData() //
+  const handleDeleteItem = async (id: string) => {
+    if (confirm('Are you sure you want to remove this product?')) {
+      const { error } = await supabase.from('household_items').delete().eq('id', id)
+      if (!error) {
+        alert('Product removed!')
+        fetchData()
       }
     }
   }
@@ -148,53 +148,53 @@ export default function AdminDashboard() {
         <div className="flex flex-col md:flex-row gap-12">
           {/* UPLOAD FORM */}
           <div className="w-full md:w-5/12">
-            <h3 className="text-xl font-bold text-amber-500 mb-4">Add Catalog Item</h3> {/* */}
-            <form onSubmit={handleAddItem} className="bg-[#121212] p-6 rounded-2xl border border-zinc-800 space-y-4"> {/* */}
-              <div> {/* */}
-                <label className="text-xs font-semibold text-zinc-400 block mb-1">Product Title</label> {/* */}
-                <input type="text" value={title} onChange={e => setTitle(e.target.value)} required className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm" /> {/* */}
-              </div> {/* */}
-              <div> {/* */}
-                <label className="text-xs font-semibold text-zinc-400 block mb-1">Asking Price (KES)</label> {/* */}
-                <input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm" /> {/* */}
-              </div> {/* */}
-              <div> {/* */}
-                <label className="text-xs font-semibold text-zinc-400 block mb-1">Category</label> {/* */}
-                <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm"> {/* */}
-                  <option value="STORAGE">STORAGE</option> {/* */}
-                  <option value="STUDY">STUDY</option> {/* */}
-                  <option value="KITCHEN">KITCHEN</option> {/* */}
-                </select> {/* */}
-              </div> {/* */}
-              <div> {/* */}
-                <label className="text-xs font-semibold text-zinc-400 block mb-1">Image Link (URL)</label> {/* */}
-                <input type="text" value={imageUrl} onChange={e => setImageUrl(e.target.value)} required className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm" /> {/* */}
-              </div> {/* */}
-              <div> {/* */}
-                <label className="text-xs font-semibold text-zinc-400 block mb-1">Description</label> {/* */}
-                <textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl h-20 text-sm resize-none" /> {/* */}
-              </div> {/* */}
-              <button type="submit" className="w-full bg-amber-500 text-black font-bold py-3 rounded-xl text-sm">Publish Product Live</button> {/* */}
-            </form> {/* */}
+            <h3 className="text-xl font-bold text-amber-500 mb-4">Add Catalog Item</h3>
+            <form onSubmit={handleAddItem} className="bg-[#121212] p-6 rounded-2xl border border-zinc-800 space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-400 block mb-1">Product Title</label>
+                <input type="text" value={title} onChange={e => setTitle(e.target.value)} required className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-400 block mb-1">Asking Price (KES)</label>
+                <input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-400 block mb-1">Category</label>
+                <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white">
+                  <option value="STORAGE">STORAGE</option>
+                  <option value="STUDY">STUDY</option>
+                  <option value="KITCHEN">KITCHEN</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-400 block mb-1">Image Link (URL)</label>
+                <input type="text" value={imageUrl} onChange={e => setImageUrl(e.target.value)} required className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-zinc-400 block mb-1">Description</label>
+                <textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl h-20 text-sm resize-none text-white" />
+              </div>
+              <button type="submit" className="w-full bg-amber-500 text-black font-bold py-3 rounded-xl text-sm">Publish Product Live</button>
+            </form>
           </div>
 
           {/* ACTIVE MANAGEMENT LIST */}
           <div className="w-full md:w-7/12">
-            <h3 className="text-xl font-bold mb-4">Live Catalog Listings ({items.length})</h3> {/* */}
-            <div className="space-y-3"> {/* */}
-              {items.map((item: any) => ( //
-                <div key={item.id} className="bg-[#121212] p-4 rounded-xl border border-zinc-800 flex items-center justify-between gap-4"> {/* */}
-                  <div className="flex items-center gap-3"> {/* */}
-                    <img src={item.image_url} className="w-10 h-10 object-cover rounded-lg" /> {/* */}
-                    <div> {/* */}
-                      <p className="font-bold text-sm">{item.title}</p> {/* */}
-                      <p className="text-xs text-zinc-400">KES {item.price.toLocaleString()} • <span className="text-amber-500">{item.category}</span></p> {/* */}
-                    </div> {/* */}
-                  </div> {/* */}
-                  <button onClick={() => handleDeleteItem(item.id)} className="bg-red-950/40 text-red-400 px-3 py-1 rounded-xl text-xs">Delete</button> {/* */}
-                </div> {/* */}
-              ))} {/* */}
-            </div> {/* */}
+            <h3 className="text-xl font-bold mb-4">Live Catalog Listings ({items.length})</h3>
+            <div className="space-y-3">
+              {items.map((item: any) => (
+                <div key={item.id} className="bg-[#121212] p-4 rounded-xl border border-zinc-800 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <img src={item.image_url} className="w-10 h-10 object-cover rounded-lg" alt={item.title} />
+                    <div>
+                      <p className="font-bold text-sm">{item.title}</p>
+                      <p className="text-xs text-zinc-400">KES {item.price.toLocaleString()} • <span className="text-amber-500">{item.category}</span></p>
+                    </div>
+                  </div>
+                  <button onClick={() => handleDeleteItem(item.id)} className="bg-red-950/40 text-red-400 px-3 py-1 rounded-xl text-xs hover:bg-red-950 transition">Delete</button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
