@@ -10,14 +10,15 @@ export default function AdminDashboard() {
   const [items, setItems] = useState([])
   const [title, setTitle] = useState('')
   const [price, setPrice] = useState('')
-  const [category, setCategory] = useState('STORAGE')
+  // Defaulting to HOUSEHOLD ITEMS as requested in chat
+  const [category, setCategory] = useState('HOUSEHOLD_ITEMS') 
   const [description, setDescription] = useState('')
   
   // States for file picking & uploading state
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
 
-  // New States for On-Screen Editing Text Controls
+  // States for On-Screen Editing Text Controls
   const [heroTitleInput, setHeroTitleInput] = useState('')
   const [heroSubtitleInput, setHeroSubtitleInput] = useState('')
   const [noticeInput, setNoticeInput] = useState('')
@@ -34,14 +35,12 @@ export default function AdminDashboard() {
   }
 
   const fetchData = async () => {
-    // 1. Fetch inventory items
     const { data: itemData } = await supabase
       .from('household_items')
       .select('*')
       .order('created_at', { ascending: false })
     if (itemData) setItems(itemData)
 
-    // 2. Fetch current site layout texts
     const { data: textData } = await supabase.from('site_settings').select('*')
     if (textData) {
       textData.forEach((row: any) => {
@@ -69,12 +68,10 @@ export default function AdminDashboard() {
     try {
       setUploading(true)
 
-      // 1. Generate a clean unique filename to avoid duplicates
       const fileExt = imageFile.name.split('.').pop()
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
       const filePath = `products/${fileName}`
 
-      // 2. Upload the raw binary file to your Supabase public storage bucket
       const { error: uploadError } = await supabase.storage
         .from('product-images')
         .upload(filePath, imageFile)
@@ -83,12 +80,10 @@ export default function AdminDashboard() {
         throw new Error('Image storage upload failed: ' + uploadError.message)
       }
 
-      // 3. Construct and grab the absolute public asset URL
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
         .getPublicUrl(filePath)
 
-      // 4. Save to the database table matching your layout schema
       const { error: dbError } = await supabase.from('household_items').insert([
         { 
           title, 
@@ -103,9 +98,8 @@ export default function AdminDashboard() {
         throw new Error('Database registry failed: ' + dbError.message)
       }
 
-      alert('Product published live successfully with uploaded image!')
+      alert('Product published live successfully!')
       
-      // Reset inputs & local image state variables
       setTitle('')
       setPrice('')
       setDescription('')
@@ -116,7 +110,7 @@ export default function AdminDashboard() {
 
       fetchData()
     } catch (err: any) {
-      alert(err.message || 'An unexpected error occurred.')
+      alert(err.message || 'An error occurred.')
     } finally {
       setUploading(false)
     }
@@ -163,7 +157,7 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-[#0a0a0a] text-white p-6">
       <div className="max-w-6xl mx-auto space-y-12">
         
-        {/* TEXT ON SCREEN EDIT MANAGER SECTION */}
+        {/* LIVE TEXT EDITOR */}
         <div className="bg-[#121212] p-6 rounded-2xl border border-zinc-800">
           <h2 className="text-2xl font-bold text-amber-500 mb-1">Live Interface Text Editor</h2>
           <p className="text-zinc-400 text-sm mb-6">Rewrite headings or subheadings instantly across the homepage without coding.</p>
@@ -197,9 +191,8 @@ export default function AdminDashboard() {
 
         <hr className="border-zinc-800" />
 
-        {/* INVENTORY MANAGEMENT SECTION */}
+        {/* INVENTORY MANAGEMENT */}
         <div className="flex flex-col md:flex-row gap-12">
-          {/* UPLOAD FORM */}
           <div className="w-full md:w-5/12">
             <h3 className="text-xl font-bold text-amber-500 mb-4">Add Catalog Item</h3>
             <form onSubmit={handleAddItem} className="bg-[#121212] p-6 rounded-2xl border border-zinc-800 space-y-4">
@@ -212,11 +205,13 @@ export default function AdminDashboard() {
                 <input type="number" value={price} onChange={e => setPrice(e.target.value)} required className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white" />
               </div>
               <div>
-                <label className="text-xs font-semibold text-zinc-400 block mb-1">Category</label>
-                <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-white">
-                  <option value="STORAGE">STORAGE</option>
-                  <option value="STUDY">STUDY</option>
-                  <option value="KITCHEN">KITCHEN</option>
+                <label className="text-xs font-semibold text-zinc-400 block mb-1">Target Platform Section</label>
+                <select value={category} onChange={e => setCategory(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-sm text-amber-500 font-bold bg-[#121212]">
+                  <option value="HOUSES">HOUSES (Bedsitters, Single Rooms)</option>
+                  <option value="HOUSEHOLD_ITEMS">HOUSEHOLD ITEMS (Beds, Wardrobes, Storage)</option>
+                  <option value="ELECTRONICS">ELECTRONICS (Microwaves, Kettles, Dispensers)</option>
+                  <option value="LAPTOPS">LAPTOPS & COMPUTERS</option>
+                  <option value="PHONES">PHONES & ACCESSORIES</option>
                 </select>
               </div>
               <div>
@@ -235,7 +230,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-zinc-400 block mb-1">Description</label>
+                <label className="text-xs font-semibold text-zinc-400 block mb-1">Description (e.g., Condition, Specific Location)</label>
                 <textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full p-2.5 bg-zinc-950 border border-zinc-800 rounded-xl h-20 text-sm resize-none text-white" />
               </div>
               <button 
@@ -243,7 +238,7 @@ export default function AdminDashboard() {
                 disabled={uploading}
                 className="w-full bg-amber-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-black font-bold py-3 rounded-xl text-sm transition-colors"
               >
-                {uploading ? 'Uploading Image...' : 'Publish Product Live'}
+                {uploading ? 'Uploading Asset to Supabase...' : 'Publish Product Live'}
               </button>
             </form>
           </div>
@@ -258,7 +253,7 @@ export default function AdminDashboard() {
                     <img src={item.image_url} className="w-10 h-10 object-cover rounded-lg bg-zinc-900" alt={item.title} />
                     <div>
                       <p className="font-bold text-sm">{item.title}</p>
-                      <p className="text-xs text-zinc-400">KES {item.price.toLocaleString()} • <span className="text-amber-500">{item.category}</span></p>
+                      <p className="text-xs text-zinc-400">KES {item.price.toLocaleString()} • <span className="text-amber-500 font-semibold">{item.category}</span></p>
                     </div>
                   </div>
                   <button onClick={() => handleDeleteItem(item.id)} className="bg-red-950/40 text-red-400 px-3 py-1 rounded-xl text-xs hover:bg-red-950 transition">Delete</button>
